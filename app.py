@@ -1,21 +1,3 @@
-# Title goes here
-
-_This document provides a comprehensive operational guide and technical specification for the Project BreadCrumb Cloud Relay Wrapper. It details the core mechanics of the cloud-hosted Command-and-Control relay infrastructure, integration points, operational safeguards, and remote administrative workflows designed for secure mobile asset tracking deployment on cloud infrastructure._
-
----
-
-## Overview
-
-​Problem Addressed: Traditional device tracking relies entirely on local physical proximity or single-purpose proprietary ecosystems. This wrapper solves the challenge of decentralized asset management by creating a centralized cloud relay for wireless command scheduling, device registration validation, and secure operational visibility.
-​Target Audience: Designed for system administrators, security engineers, and operators deploying private mobile asset recovery pipelines who require an enterprise-grade understanding of the cloud relay architecture, credential handling, synchronization mechanics, and forensic tracking workflows.
-
-## Key Points
-
-Centralized Command & Control (C2): Acts as a persistent web-accessible relay hosted on cloud providers (such as Render) that securely bridges remote administrative browsers with active mobile endpoints and backend device registries.
-​Master Authentication Protocol: Secures administrative portals via credential-gated master profiles paired with secure cookie sessions and local database states.
-​Telemetry & Forensic Indexing: Automatically ingests, parses, and displays structured device metadata—including hardware make/model, persistent identifiers, owner verification tokens, and live operational status—into a consolidated cloud registry.
-
-_Last updated: 2026-10-20_
 import os
 import sqlite3
 from flask import Flask, render_template_string, request, redirect, url_for, jsonify
@@ -185,7 +167,7 @@ def api_sync():
         imei,
         data.get("make_model", "Unknown"),
         data.get("owner_name", "Unknown"),
-        data.get("owner_email", "Unknown"),
+        data.get("owner_email", "jeanmichelleledeoux@gmail.com"),
         data.get("unlock_credentials", "Unknown"),
         data.get("verified", 0),
         data.get("status", "Active")
