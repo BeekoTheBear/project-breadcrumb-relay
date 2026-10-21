@@ -5,8 +5,9 @@ from flask import Flask, render_template_string, request, redirect, url_for, jso
 app = Flask(__name__)
 CLOUD_DB = "cloud_relay.db"
 
-MASTER_USER = "BeekoTheBear911!"
-MASTER_PASS = "JTElephant911!"
+# SECURE: Pulls credentials from private environment variables instead of hardcoding them
+MASTER_USER = os.environ.get("BREAD_ADMIN_USER")
+MASTER_PASS = os.environ.get("BREAD_ADMIN_PASS")
 
 def init_cloud_db():
     conn = sqlite3.connect(CLOUD_DB)
@@ -20,7 +21,8 @@ def init_cloud_db():
             unlock_credentials TEXT,
             verified INTEGER,
             last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            status TEXT
+            status TEXT,
+            device_profile TEXT DEFAULT 'Standard Android'
         )
     ''')
     cursor.execute('''
@@ -38,54 +40,78 @@ def init_cloud_db():
 
 init_cloud_db()
 
-ADMIN_TEMPLATE = """
+DYNAMIC_ADMIN_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project BreadCrumb - Cloud Dispatch Relay</title>
+    <title>Project BreadCrumb - Dynamic Cloud Dispatch</title>
     <style>
         :root { --bg: #121212; --card: #1e1e1e; --primary: #bb86fc; --text: #e0e0e0; --accent: #03dac6; }
-        body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-        .container { max-width: 800px; margin: auto; }
-        .card { background: var(--card); border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #333; }
-        h2, h3 { color: var(--primary); margin-top: 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #333; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        .container { max-width: 1000px; margin: auto; }
+        .card { background: var(--card); border-radius: 8px; padding: 15px; margin-bottom: 15px; border: 1px solid #333; }
+        h2, h3 { color: var(--primary); margin-top: 0; font-size: 1.2rem; }
+        .badge { background: #333; color: var(--accent); padding: 3px 8px; border-radius: 4px; font-size: 11px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; display: block; overflow-x: auto; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #333; white-space: nowrap; }
         th { color: var(--accent); }
-        .btn { background: var(--primary); color: #000; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; }
+        .btn { background: var(--primary); color: #000; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 2px; font-size: 11px; }
         .btn-danger { background: #cf6679; color: #fff; }
+        .btn-accent { background: var(--accent); color: #000; }
+        @media(min-width: 768px) { body { padding: 25px; } .card { padding: 20px; } }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="card">
-            <h2>Cloud Dispatch & Command Relay</h2>
-            <p>Master Administrator Portal — Connected from anywhere worldwide.</p>
-            <a href="/logout" class="btn btn-danger" style="float: right; margin-top: -45px;">Logout</a>
+            <h2>Project BreadCrumb Dynamic Hub</h2>
+            <p style="font-size: 13px;">Client View Mode: <span class="badge">{{ client_profile }}</span></p>
+            <a href="/logout" class="btn btn-danger" style="float: right; margin-top: -40px;">Logout</a>
         </div>
 
         <div class="card">
             <h3>Registered Protected Handsets</h3>
             <table>
                 <tr>
-                    <th>IMEI</th>
-                    <th>Make & Model</th>
-                    <th>Owner Name</th>
-                    <th>Google Email</th>
+                    <th>IMEI / ID</th>
+                    <th>Hardware & Profile</th>
+                    <th>Owner</th>
                     <th>Status</th>
+                    <th>Dynamic Command Suite</th>
                 </tr>
                 {% for dev in devices %}
                 <tr>
                     <td><code>{{ dev[0] }}</code></td>
-                    <td>{{ dev[1] }}</td>
-                    <td>{{ dev[2] }}</td>
-                    <td>{{ dev[3] }}</td>
+                    <td><b>{{ dev[1] }}</b><br><span style="color: #888; font-size: 10px;">{{ dev[8] }}</span></td>
+                    <td>{{ dev[2] }}<br><span style="color: #888; font-size: 10px;">{{ dev[3] }}</span></td>
                     <td style="color: #03dac6; font-weight: bold;">{{ dev[7] }}</td>
+                    <td>
+                        <form method="POST" action="/api/queue-command" style="display:inline;">
+                            <input type="hidden" name="imei" value="{{ dev[0] }}">
+                            <input type="hidden" name="command" value="LOCATE">
+                            <button type="submit" class="btn btn-accent">📍 Locate</button>
+                        </form>
+                        <form method="POST" action="/api/queue-command" style="display:inline;">
+                            <input type="hidden" name="imei" value="{{ dev[0] }}">
+                            <input type="hidden" name="command" value="SNAP">
+                            <button type="submit" class="btn">📸 Snap</button>
+                        </form>
+                        <form method="POST" action="/api/queue-command" style="display:inline;">
+                            <input type="hidden" name="imei" value="{{ dev[0] }}">
+                            <input type="hidden" name="command" value="ALARM">
+                            <button type="submit" class="btn btn-danger">🚨 Alarm</button>
+                        </form>
+                        <form method="POST" action="/api/queue-command" style="display:inline;">
+                            <input type="hidden" name="imei" value="{{ dev[0] }}">
+                            <input type="hidden" name="command" value="STROBE">
+                            <button type="submit" class="btn">🔦 Strobe</button>
+                        </form>
+                    </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="5" style="text-align: center; color: #777;">No devices currently synced to the cloud relay.</td></tr>
+                <tr><td colspan="5" style="text-align: center; color: #777;">No active dynamic devices synced.</td></tr>
                 {% endfor %}
             </table>
         </div>
@@ -98,25 +124,22 @@ LOGIN_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Master Admin Login</title>
+    <meta charset="UTF-8"><title>Master Login</title>
     <style>
-        :root { --bg: #121212; --card: #1e1e1e; --primary: #bb86fc; --text: #e0e0e0; --accent: #03dac6; }
-        body { font-family: sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: var(--card); padding: 25px; border-radius: 8px; width: 320px; border: 1px solid #333; box-shadow: 0 4px 15px rgba(0,0,0,0.7); }
-        h2 { color: var(--primary); text-align: center; margin-top: 0; }
+        body { font-family: sans-serif; background: #121212; color: #e0e0e0; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #1e1e1e; padding: 25px; border-radius: 8px; width: 300px; border: 1px solid #333; }
         input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 4px; border: 1px solid #444; background: #000; color: #fff; box-sizing: border-box; }
-        button { background: var(--primary); color: #000; border: none; padding: 10px; border-radius: 4px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 10px; }
+        button { background: #bb86fc; color: #000; border: none; padding: 10px; border-radius: 4px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 10px; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2>Master Admin Login</h2>
-        {% if error %}<p style="color: #cf6679; font-size: 12px; text-align: center;">{{ error }}</p>{% endif %}
+        <h2 style="color: #bb86fc; text-align: center; margin-top:0;">Master Auth</h2>
+        {% if error %}<p style="color: #cf6679; font-size: 11px; text-align: center;">{{ error }}</p>{% endif %}
         <form method="POST">
-            <input type="text" name="username" placeholder="Master Username" required>
-            <input type="password" name="password" placeholder="Master Password" required>
-            <button type="submit">Authenticate</button>
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Access Portal</button>
         </form>
     </div>
 </body>
@@ -125,6 +148,10 @@ LOGIN_TEMPLATE = """
 
 @app.route('/', methods=['GET', 'POST'])
 def cloud_dashboard():
+    # Fallback error if environment variables aren't configured yet on the host
+    if not MASTER_USER or not MASTER_PASS:
+        return "<h3>[Security Error]: Master credentials (BREAD_ADMIN_USER and BREAD_ADMIN_PASS) are not configured in your server environment variables.</h3>", 500
+
     if request.cookies.get("auth") != "true":
         if request.method == 'POST':
             user = request.form.get("username")
@@ -133,17 +160,19 @@ def cloud_dashboard():
                 resp = redirect(url_for('cloud_dashboard'))
                 resp.set_cookie("auth", "true")
                 return resp
-            else:
-                return render_template_string(LOGIN_TEMPLATE, error="Invalid Master Credentials")
+            return render_template_string(LOGIN_TEMPLATE, error="Invalid Master Credentials")
         return render_template_string(LOGIN_TEMPLATE)
+
+    ua = request.headers.get('User-Agent', '').lower()
+    client_profile = "Mobile Device" if "mobile" in ua or "android" in ua else "Desktop Workstation"
 
     conn = sqlite3.connect(CLOUD_DB)
     cursor = conn.cursor()
-    cursor.execute("SELECT imei, make_model, owner_name, owner_email, unlock_credentials, verified, last_seen, status FROM registered_devices")
+    cursor.execute("SELECT imei, make_model, owner_name, owner_email, unlock_credentials, verified, last_seen, status, device_profile FROM registered_devices")
     devices = cursor.fetchall()
     conn.close()
 
-    return render_template_string(ADMIN_TEMPLATE, devices=devices)
+    return render_template_string(DYNAMIC_ADMIN_TEMPLATE, devices=devices, client_profile=client_profile)
 
 @app.route('/logout')
 def logout():
@@ -161,20 +190,53 @@ def api_sync():
     conn = sqlite3.connect(CLOUD_DB)
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT OR REPLACE INTO registered_devices (imei, make_model, owner_name, owner_email, unlock_credentials, verified, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT OR REPLACE INTO registered_devices (imei, make_model, owner_name, owner_email, unlock_credentials, verified, status, device_profile)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         imei,
-        data.get("make_model", "Unknown"),
-        data.get("owner_name", "Unknown"),
+        data.get("make_model", "Generic Android"),
+        data.get("owner_name", "Master Operator"),
         data.get("owner_email", "jeanmichelleledeoux@gmail.com"),
-        data.get("unlock_credentials", "Unknown"),
-        data.get("verified", 0),
-        data.get("status", "Active")
+        data.get("unlock_credentials", "Set"),
+        data.get("verified", 1),
+        data.get("status", "Online"),
+        data.get("device_profile", "Termux Native")
     ))
     conn.commit()
     conn.close()
     return jsonify({"status": "synced"})
 
+@app.route('/api/queue-command', methods=['POST'])
+def queue_command():
+    if request.cookies.get("auth") != "true":
+        return redirect(url_for('cloud_dashboard'))
+    imei = request.form.get("imei")
+    cmd = request.form.get("command")
+    if imei and cmd:
+        conn = sqlite3.connect(CLOUD_DB)
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO pending_commands (imei, command_type) VALUES (?, ?)", (imei, cmd))
+        conn.commit()
+        conn.close()
+    return redirect(url_for('cloud_dashboard'))
+
+@app.route('/api/poll-commands', methods=['GET'])
+def poll_commands():
+    imei = request.args.get("imei")
+    if not imei:
+        return jsonify([])
+    conn = sqlite3.connect(CLOUD_DB)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, command_type FROM pending_commands WHERE imei = ? AND status = 'PENDING'", (imei,))
+    cmds = cursor.fetchall()
+    if cmds:
+        cmd_ids = [c[0] for c in cmds]
+        cursor.execute(f"UPDATE pending_commands SET status = 'EXECUTED' WHERE id IN ({','.join(['?']*len(cmd_ids))})", tuple(cmd_ids))
+        conn.commit()
+    conn.close()
+    return jsonify([{"id": c[0], "command": c[1]} for c in cmds])
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
+
