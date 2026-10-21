@@ -258,8 +258,6 @@ def upload_forensics():
 
     conn = sqlite3.connect(CLOUD_DB)
     cursor = conn.cursor()
-    
-    # REFRESH / UPSERT LOGIC: Update existing log category for this device instead of duplicating rows
     cursor.execute('''
         INSERT INTO forensic_logs (imei, data_type, content, timestamp)
         SELECT ?, ?, ?, CURRENT_TIMESTAMP
