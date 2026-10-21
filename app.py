@@ -2,14 +2,14 @@ import os
 import sqlite3
 import time
 from flask import Flask, render_template_string, request, redirect, url_for, jsonify, send_from_directory
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import check_password_hash
 
 app = Flask(__name__)
 CLOUD_DB = "cloud_relay.db"
 UPLOAD_FOLDER = "media_vault_storage"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# SECURE: Pulled strictly from environment variables
+# SECURE: Pulled entirely from Render environment variables (Nothing hardcoded)
 MASTER_USER = os.environ.get("MASTER_USER")
 MASTER_PASS_HASH = os.environ.get("MASTER_PASS_HASH")
 
@@ -213,7 +213,15 @@ def cloud_dashboard():
         if request.method == 'POST':
             username = request.form.get("username")
             password = request.form.get("password")
-            if username == MASTER_USER and check_password_hash(MASTER_PASS_HASH, password):
+            
+            # Flexible validation supporting both plain text and secure password hashes in Render
+            password_matches = False
+            if MASTER_PASS_HASH.startswith(("pbkdf2:", "scrypt:", "$")):
+                password_matches = check_password_hash(MASTER_PASS_HASH, password)
+            else:
+                password_matches = (MASTER_PASS_HASH == password)
+
+            if username == MASTER_USER and password_matches:
                 resp = redirect(url_for('cloud_dashboard'))
                 resp.set_cookie("auth", "true")
                 return resp
