@@ -1,13 +1,24 @@
 import os
 import sqlite3
 from flask import Flask, request, jsonify, render_template_string, redirect, url_for, session
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "breadcrumb_super_secret_key_911")
 
-# Master Admin Credentials
-ADMIN_USER = "BeekoTheBear911!"
-ADMIN_PASS = "JTElephant911!"
+# Configure secure session cookies
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SECURE'] = True  # Enforces HTTPS on Render
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+# Load Admin Credentials Securely from Render Environment Variables
+ADMIN_USER = os.environ.get("BREAD_ADMIN_USER")
+raw_password = os.environ.get("BREAD_ADMIN_PASS")
+
+if not ADMIN_USER or not raw_password:
+    raise RuntimeError("[Security Configuration Error]: BREAD_ADMIN_USER and BREAD_ADMIN_PASS environment variables must be set in Render.")
+
+ADMIN_PASS_HASH = generate_password_hash(raw_password)
 
 DB_PATH = "breadcrumb_cloud.db"
 
@@ -52,7 +63,8 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        if username == ADMIN_USER and password == ADMIN_PASS:
+        if username == ADMIN_USER and check_password_hash(ADMIN_PASS_HASH, password):
+            session.clear()
             session['logged_in'] = True
             return redirect(url_for('admin_dashboard'))
         else:
@@ -138,8 +150,6 @@ def admin_dashboard():
                 .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
                 button, .btn { padding: 10px 16px; background: #0284c7; border: none; color: white; border-radius: 6px; cursor: pointer; font-weight: bold; text-decoration: none; font-size: 13px; }
                 button:hover, .btn:hover { background: #0369a1; }
-                .btn-danger { background: #e11d48; }
-                .btn-danger:hover { background: #be123c; }
                 .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
                 .media-thumb { width: 100%; height: 120px; object-fit: cover; border-radius: 6px; border: 1px solid #334155; }
             </style>
@@ -231,7 +241,7 @@ def api_sync():
         return jsonify({"error": "Missing IMEI"}), 400
     
     imei = data['imei']
-    make_model = data.get('make_model', 'Unknown Android')
+    make_model = data.get('make_model', 'Android Agent')
     status = data.get('status', 'Online')
     
     conn = sqlite3.connect(DB_PATH)
