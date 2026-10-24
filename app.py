@@ -95,7 +95,7 @@ MOBILE_ADMIN_TEMPLATE = """
     <div class="container">
         <div class="card top-bar">
             <div>
-                <h2>BreadCrumb Hub</h2>
+                <h2>Master Control</h2>
                 <p>Mobile Command & Recovery</p>
             </div>
             <a href="/logout" class="btn btn-danger" style="flex: none; padding: 6px 12px;">Logout</a>
